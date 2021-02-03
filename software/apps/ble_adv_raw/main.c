@@ -15,7 +15,7 @@ static simple_ble_config_t ble_config = {
         // c0:98:e5:4e:xx:xx
         .platform_id       = 0x4E,   // used as 4th octect in device BLE address
         .device_id         = 0xAABB, // must be unique on each device you program!
-        .adv_name          = "CS397/497", // used in advertisements if there is room
+        .adv_name          = "mashPotat", // used in advertisements if there is room
         .adv_interval      = MSEC_TO_UNITS(1000, UNIT_0_625_MS),
         .min_conn_interval = MSEC_TO_UNITS(500, UNIT_1_25_MS),
         .max_conn_interval = MSEC_TO_UNITS(1000, UNIT_1_25_MS),
@@ -37,9 +37,15 @@ int main(void) {
   simple_ble_app = simple_ble_init(&ble_config);
 
   // Start Advertising
-  uint8_t ble_data[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x0A, 0x09, 0x43, 0x53, 0x33, 0x39, 0x37, 0x2F, 0x34, 0x39, 0x37,};
+  // two bytes, specify flags type, specify flags, three bytes, manufacturer type, 0x0965(asahi kasei), name, 13 bytes, name's bytes
+  uint8_t ble_data[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x03, 0xff, 0x65, 0x09, 0x0E, 0x09, 0x6d, 0x61, 0x73, 0x68, 0x65, 0x64, 0x20, 0x70, 0x6f, 0x74, 0x61, 0x74, 0x6f};
 
-  simple_ble_adv_raw(ble_data, 14);
+  // stuff for eddystone packets
+//  char url_str[] = "google.com";
+//  simple_ble_es_with_name(url_str);
+
+  // stuff for regular raw ble advertisements
+  simple_ble_adv_raw(ble_data, 22);
   printf("Started BLE advertisements\n");
 
   while(1) {
