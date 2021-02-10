@@ -29,6 +29,10 @@ static simple_ble_service_t led_service = {{
 }};
 
 static simple_ble_char_t led_state_char = {.uuid16 = 0x1089};
+static simple_ble_char_t button_state_char = {.uuid16 = 0x108A};
+static simple_ble_char_t write_to_chip_char = {.uuid16 = 0x108B};
+static uint8_t written = 0;
+static uint8_t buttonState = 0;
 static bool led_state = false;
 
 /*******************************************************************************
@@ -52,11 +56,19 @@ void ble_evt_write(ble_evt_t const* p_ble_evt) {
       nrf_gpio_pin_set(LED1);
     }
   }
+  if (simple_ble_is_char_event(p_ble_evt, &write_to_chip_char)){
+  	printf("written is %d\n", written);
+  }
 }
 
 int main(void) {
 
   printf("Board started. Initializing BLE: \n");
+
+  nrf_gpio_cfg_input(BUTTON1, NRF_GPIO_PIN_PULLUP);
+  nrf_gpio_cfg_input(BUTTON2, NRF_GPIO_PIN_PULLUP);
+  nrf_gpio_cfg_input(BUTTON3, NRF_GPIO_PIN_PULLUP);
+  nrf_gpio_cfg_input(BUTTON4, NRF_GPIO_PIN_PULLUP); 
 
   // Setup LED GPIO
   nrf_gpio_cfg_output(LED1);
@@ -68,12 +80,39 @@ int main(void) {
   simple_ble_add_characteristic(1, 1, 0, 0,
       sizeof(led_state), (uint8_t*)&led_state,
       &led_service, &led_state_char);
+  simple_ble_add_characteristic(1, 0, 1, 0,
+	sizeof(buttonState), (uint8_t*)&buttonState,
+	&led_service, &button_state_char);
+  simple_ble_add_characteristic(1, 1, 0, 0,
+	sizeof(written), (uint8_t*)&written,
+	&led_service, &write_to_chip_char);
+
 
   // Start Advertising
   simple_ble_adv_only_name();
 
   while(1) {
-    power_manage();
+    if(!nrf_gpio_pin_read(BUTTON1) && buttonState != 1){
+	buttonState = 1;
+	printf("buttonstate is 1\n");
+    	simple_ble_notify_char(&button_state_char);
+    }
+    else if(!nrf_gpio_pin_read(BUTTON2) && buttonState != 2){
+	buttonState = 2;
+	printf("buttonstate is 2\n");
+	simple_ble_notify_char(&button_state_char);
+    }
+    else if(!nrf_gpio_pin_read(BUTTON3) && buttonState != 3){
+	buttonState = 3;
+	printf("buttonstate is 3\n");
+    	simple_ble_notify_char(&button_state_char);
+    }
+    else if(!nrf_gpio_pin_read(BUTTON4) && buttonState != 4){
+	buttonState = 4;
+	printf("buttonstate is 4\n");
+    	simple_ble_notify_char(&button_state_char);
+    }
+
   }
 }
 
