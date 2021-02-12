@@ -28,6 +28,17 @@ static simple_ble_service_t environmental_sensing_service = {{
               0x00,0x10,0x00,0x00,0x1A,0x18,0x00,0x00}
 }};
 
+static simple_ble_char_t Elevation = {.uuid16 = 0x2A6C};
+static simple_ble_char_t Pressure = {.uuid16 = 0x2A6D};
+static simple_ble_char_t Humidity = {.uuid16 = 0x2A6F};
+static simple_ble_char_t Rainfall = {.uuid16 = 0x2A78};
+static simple_ble_char_t Windchill = {.uuid16 = 0x2A79};
+static int32_t elevationNum = 1000 & 0xFFFFFF;
+static uint32_t pressureNum = 30;
+static uint16_t humidityNum = 74;
+static uint16_t rainfallNum = 5;
+static int8_t windchillNum = 5;
+
 /*******************************************************************************
  *   State for this application
  ******************************************************************************/
@@ -46,6 +57,21 @@ int main(void) {
   simple_ble_app = simple_ble_init(&ble_config);
 
   simple_ble_add_service(&environmental_sensing_service);
+  simple_ble_add_characteristic(1, 0, 1, 0,
+	24,(uint8_t*)&elevationNum,
+	&environmental_sensing_service, &Elevation);
+  simple_ble_add_characteristic(1, 0, 1, 0,
+        sizeof(pressureNum),(uint8_t*)&pressureNum,
+        &environmental_sensing_service, &Pressure);
+  simple_ble_add_characteristic(1, 0, 1, 0,
+        sizeof(humidityNum),(uint8_t*)&humidityNum,
+        &environmental_sensing_service, &Humidity);
+  simple_ble_add_characteristic(1, 0, 1, 0,
+        sizeof(rainfallNum),(uint8_t*)&rainfallNum,
+        &environmental_sensing_service, &Rainfall);
+  simple_ble_add_characteristic(1, 0, 1, 0,
+        sizeof(windchillNum),(uint8_t*)&windchillNum,
+        &environmental_sensing_service, &Windchill);
 
   // Start Advertising
   simple_ble_adv_only_name();
