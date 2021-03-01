@@ -79,30 +79,24 @@ BOARD_SOURCES += \
 	nrfx_twim.c\
 	nrfx_uart.c\
 	nrfx_uarte.c\
-	nrf_crypto_aes.c\
-	nrf_crypto_error.c\
-	nrf_crypto_init.c\
-	cc310_backend_aes.c\
-	cc310_backend_mutex.c\
-	cc310_backend_shared.c\
-	mem_manager.c\
-
 
 ifneq ($(SOFTDEVICE_MODEL),blank)
 BOARD_SOURCES += \
 	ble_advdata.c\
 	ble_advertising.c\
 	ble_conn_params.c\
+	ble_db_discovery.c\
+	ble_lbs_c.c\
 	ble_srv_common.c\
 	nrf_ble_gatt.c\
+	nrf_ble_scan.c\
 	nrf_ble_qwr.c\
 	nrf_sdh.c\
 	nrf_sdh_ble.c\
-	simple_ble.c\
+
+	#simple_ble.c\ ## Cannot have simple BLE or everything breaks for some reason...
 
 endif
-
-LIBS += $(SDK_ROOT)external/nrf_cc310/lib/cortex-m4/hard-float/libnrf_cc310_0.9.12.a
 
 endif
 
