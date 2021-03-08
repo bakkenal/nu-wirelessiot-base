@@ -71,6 +71,7 @@ BOARD_SOURCES += \
 	nrfx_ppi.c\
 	nrfx_prs.c\
 	nrfx_pwm.c\
+	nrfx_rtc.c\
 	nrfx_saadc.c\
 	nrfx_spi.c\
 	nrfx_spim.c\
@@ -80,6 +81,7 @@ BOARD_SOURCES += \
 	nrfx_uart.c\
 	nrfx_uarte.c\
 	nrf_crypto_aes.c\
+	nrf_crypto_aes_shared.c\
 	nrf_crypto_error.c\
 	nrf_crypto_init.c\
 	cc310_backend_aes.c\

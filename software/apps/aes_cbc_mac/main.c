@@ -106,21 +106,21 @@ static uint8_t expected_mac[AES_MAC_SIZE] =
 
 static void text_print(char const* p_label, char const * p_text, size_t len)
 {
-    NRF_LOG_RAW_INFO("----%s (length: %u) ----\r\n", p_label, len);
+    printf("----%s (length: %u) ----\r\n", p_label, len);
     NRF_LOG_FLUSH();
     for(size_t i = 0; i < len; i++)
     {
-        NRF_LOG_RAW_INFO("%c", p_text[i]);
+        printf("%c", p_text[i]);
         NRF_LOG_FLUSH();
     }
-    NRF_LOG_RAW_INFO("\r\n");
-    NRF_LOG_RAW_INFO("---- %s end ----\r\n\r\n", p_label);
+    printf("\r\n");
+    printf("---- %s end ----\r\n\r\n", p_label);
     NRF_LOG_FLUSH();
 }
 
 static void hex_text_print(char const* p_label, char const * p_text, size_t len)
 {
-    NRF_LOG_RAW_INFO("---- %s (length: %u) ----\r\n", p_label, len);
+    printf("---- %s (length: %u) ----\r\n", p_label, len);
     NRF_LOG_FLUSH();
 
     // Handle partial line (left)
@@ -128,15 +128,15 @@ static void hex_text_print(char const* p_label, char const * p_text, size_t len)
     {
         if (((i & 0xF) == 0) && (i > 0))
         {
-            NRF_LOG_RAW_INFO("\r\n");
+            printf("\r\n");
             NRF_LOG_FLUSH();
         }
 
-        NRF_LOG_RAW_INFO("%02x ", p_text[i]);
+        printf("%02x ", p_text[i]);
         NRF_LOG_FLUSH();
     }
-    NRF_LOG_RAW_INFO("\r\n");
-    NRF_LOG_RAW_INFO("---- %s end ----\r\n\r\n", p_label);
+    printf("\r\n");
+    printf("---- %s end ----\r\n\r\n", p_label);
     NRF_LOG_FLUSH();
 }
 
@@ -151,7 +151,11 @@ static void plain_text_print(void)
 
 static void mac_print(uint8_t const * p_buff, uint8_t mac_size)
 {
-    hex_text_print("Calculated MAC (hex)", (char const *)p_buff, mac_size);
+    printf("printing actual mac\r\n");
+    for(int i = 0; i < mac_size; i++){
+    	printf("%x ", p_buff[i]);
+    }
+    printf("\r\n");
 }
 
 static void crypt_cbc_mac(void)
@@ -202,11 +206,11 @@ static void crypt_cbc_mac(void)
 
     if (memcmp(mac, expected_mac, AES_MAC_SIZE) == 0)
     {
-        NRF_LOG_RAW_INFO("AES CBC_MAC example executed successfully.\r\n");
+       	printf("AES CBC_MAC example executed successfully.\r\n");
     }
     else
     {
-        NRF_LOG_RAW_INFO("AES CBC_MAC example failed!!!\r\n");
+        printf("AES CBC_MAC example failed!!!\r\n");
     }
 }
 
@@ -217,7 +221,7 @@ int main(void)
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
-    NRF_LOG_RAW_INFO("AES CBC_MAC example started.\r\n\r\n");
+    printf("AES CBC_MAC example started.\r\n\r\n");
     NRF_LOG_FLUSH();
 
     ret = nrf_drv_clock_init();

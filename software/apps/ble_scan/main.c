@@ -10,6 +10,153 @@
 
 #include "nrf52840dk.h"
 
+#include "nrf.h"
+#include "nrf_drv_clock.h"
+#include "nrf_delay.h"
+
+#include "nrf_drv_power.h"
+
+#include "app_error.h"
+#include "app_util.h"
+
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "nrf_log_default_backends.h"
+
+#include "boards.h"
+
+#include "nrf_crypto.h"
+#include "nrf_crypto_error.h"
+#include "mem_manager.h"
+
+
+// crypto stuff
+
+#define NRF_CRYPTO_EXAMPLE_AES_MAX_TEXT_SIZE 120
+
+#define AES_ERROR_CHECK(error)  \
+    do {            \
+        if (error)  \
+        {           \
+            NRF_LOG_RAW_INFO("\r\nError = 0x%x\r\n%s\r\n",           \
+                             (error),                                \
+                             nrf_crypto_error_string_get(error));    \
+            return; \
+        }           \
+    } while (0);
+
+/* Maximum allowed key = 256 bit */
+static uint8_t m_key[32] = {'N', 'O', 'R', 'D', 'I', 'C', ' ',
+                            'S', 'E', 'M', 'I', 'C', 'O', 'N', 'D', 'U', 'C', 'T', 'O', 'R',
+                            'A', 'E', 'S', ' ', 'C', 'B', 'C', ' ', 'T', 'E', 'S', 'T'};
+
+/* Below text is used as plain text for encryption and decryption in AES CBC mode with padding. */
+static char m_plain_text[] =
+{
+    "Example string to demonstrate AES CBC mode with padding. This text has 85 characters."
+};
+
+static char decrypted_text[NRF_CRYPTO_EXAMPLE_AES_MAX_TEXT_SIZE];
+static char encrypted_text[NRF_CRYPTO_EXAMPLE_AES_MAX_TEXT_SIZE];
+int packetGet = 0;
+
+static void text_print(char const* p_label, char const * p_text, size_t len)
+{
+    NRF_LOG_RAW_INFO("----%s (len: %u) ----\r\n", p_label, len);
+    NRF_LOG_FLUSH();
+    for(size_t i = 0; i < len; i++)
+    {
+        NRF_LOG_RAW_INFO("%c", p_text[i]);
+        NRF_LOG_FLUSH();
+    }
+    NRF_LOG_RAW_INFO("\r\n");
+    NRF_LOG_RAW_INFO("---- %s end ----\r\n\r\n", p_label);
+    NRF_LOG_FLUSH();
+}
+
+static void hex_text_print(char const* p_label, char const * p_text, size_t len)
+{
+    NRF_LOG_RAW_INFO("---- %s (len: %u) ----\r\n", p_label, len);
+    NRF_LOG_FLUSH();
+
+    // Handle partial line (left)
+    for (size_t i = 0; i < len; i++)
+    {
+        if (((i & 0xF) == 0) && (i > 0))
+        {
+            NRF_LOG_RAW_INFO("\r\n");
+            NRF_LOG_FLUSH();
+        }
+
+        NRF_LOG_RAW_INFO("%02x ", p_text[i]);
+        NRF_LOG_FLUSH();
+    }
+    NRF_LOG_RAW_INFO("\r\n");
+    NRF_LOG_RAW_INFO("---- %s end ----\r\n\r\n", p_label);
+    NRF_LOG_FLUSH();
+}
+
+static void plain_text_print(void)
+{
+    text_print("Plain text", m_plain_text, strlen(m_plain_text));
+    hex_text_print("Plain text (hex)", m_plain_text, strlen(m_plain_text));
+}
+
+static void decrypted_text_print(char const * p_text, size_t decrypted_len)
+{
+    text_print("Decrypted text", p_text, decrypted_len);
+    hex_text_print("Decrypted text (hex)", p_text, decrypted_len);
+}
+
+static void decrypt_cbc(void)
+{
+    uint8_t     iv[16];
+    ret_code_t  ret_val;
+    size_t      len_in;
+    size_t      len_out;
+        
+    static nrf_crypto_aes_context_t cbc_decr_128_ctx; // AES CBC decryption context
+    plain_text_print();
+
+    memset(decrypted_text,  0, sizeof(decrypted_text));
+
+    //
+    // Decryption phase
+    //
+
+    /* Init decryption context for 128 bit key and PKCS7 padding mode */
+    ret_val = nrf_crypto_aes_init(&cbc_decr_128_ctx,
+                                  &g_nrf_crypto_aes_cbc_128_pad_pkcs7_info,
+                                  NRF_CRYPTO_DECRYPT);
+    AES_ERROR_CHECK(ret_val);
+
+
+    /* Set key for decryption context - only first 128 key bits will be used */
+    ret_val = nrf_crypto_aes_key_set(&cbc_decr_128_ctx, m_key);
+    AES_ERROR_CHECK(ret_val);
+
+    memset(iv, 0, sizeof(iv));
+    /* Set IV for decryption context */
+
+    ret_val = nrf_crypto_aes_iv_set(&cbc_decr_128_ctx, iv);
+    AES_ERROR_CHECK(ret_val);
+
+    /* Decrypt text */
+    ret_val = nrf_crypto_aes_finalize(&cbc_decr_128_ctx,
+                                      (uint8_t *)encrypted_text,
+                                      len_out,
+                                      (uint8_t *)decrypted_text,
+                                      &len_out);
+    AES_ERROR_CHECK(ret_val);
+
+    /* trim padding */
+    decrypted_text[len_out] = '\0';
+
+    decrypted_text_print(decrypted_text, len_out);
+    
+    NRF_LOG_FLUSH();
+}
+
 // BLE configuration
 // This is mostly irrelevant since we are scanning only
 static simple_ble_config_t ble_config = {
@@ -32,8 +179,33 @@ void ble_evt_adv_report(ble_evt_t const* p_ble_evt) {
   uint8_t const* ble_addr = adv_report->peer_addr.addr; // array of 6 bytes of the address
   uint8_t* adv_buf = adv_report->data.p_data; // array of up to 31 bytes of advertisement payload data
   uint16_t adv_len = adv_report->data.len; // length of advertisement payload data
-  if(*(ble_addr + 5) == 0xc0){
-	printf("%s\r", adv_buf + 7);
+  
+  // get packet, process
+  if(*(ble_addr + 5) == 0xc0 && packetGet == 0){
+	for(uint16_t x = 0; x < adv_len; x++){
+		encrypted_text[x] = (char)adv_buf[x]; 
+	}
+	packetGet = 1;
+
+	ret_code_t ret;
+
+    	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
+    	NRF_LOG_DEFAULT_BACKENDS_INIT();
+
+    	NRF_LOG_RAW_INFO("AES CBC example with padding started.\r\n\r\n");
+    	NRF_LOG_FLUSH();
+	
+	nrf_drv_clock_lfclk_request(NULL);
+
+        ret = nrf_crypto_init();
+        APP_ERROR_CHECK(ret);
+	
+    #if NRF_CRYPTO_BACKEND_MBEDTLS_ENABLED
+        ret = nrf_mem_init();
+        APP_ERROR_CHECK(ret);
+    #endif
+	decrypt_cbc();
+
   }
 }
 
