@@ -31,6 +31,12 @@
 
 #include "counter.h"
 
+#include "app_timer.h"
+#include "app_scheduler.h"
+#define SCHED_QUEUE_SIZE 32
+#define SCHED_EVENT_DATA_SIZE APP_TIMER_SCHED_EVENT_DATA_SIZE
+APP_TIMER_DEF(switch_send_timer);
+
 #if NRF_MODULE_ENABLED(NRF_CRYPTO)
 /**@file
  * @defgroup AES_CBC_with_padding main.c
@@ -77,7 +83,8 @@ static char encrypted_text[NRF_CRYPTO_EXAMPLE_AES_MAX_TEXT_SIZE];
 /* Below text is used as plain text for encryption and decryption in AES CBC mode with padding. */
 static char m_plain_text[] =
 {
-    "Example string to demonstrate AES CBC mode with padding. This text has 85 characters."
+    "Somebody once told me the world was going to roll me. I ain't the sharpest tool in the shed."
+    /*Example string to demonstrate AES CBC mode with padding. This text has 85 characters.*/
 };
 
 static void text_print(char const* p_label, char const * p_text, size_t len)
@@ -136,11 +143,11 @@ static void encrypt_cbc(void)
 
     static nrf_crypto_aes_context_t cbc_encr_128_ctx; // AES CBC encryption context
 
-    plain_text_print();
+//    plain_text_print();
 
     memset(encrypted_text,  0, sizeof(encrypted_text));
 
-        //
+    //
     // Encryption phase
     //
 
@@ -162,7 +169,7 @@ static void encrypt_cbc(void)
 
     len_in = strlen(m_plain_text);
     len_out = sizeof(encrypted_text);
-
+	
     /* Encrypt text
        When padding is selected m_encrypted_text buffer shall be at least 16 bytes larger
        than text_len. */
@@ -173,11 +180,57 @@ static void encrypt_cbc(void)
                                       &len_out);
     AES_ERROR_CHECK(ret_val);
 
+//    printf("size of encrypted text is %d\r\n", sizeof(encrypted_text));
     // print the encrypted text
-    encrypted_text_print(encrypted_text, len_out);
+//    encrypted_text_print(encrypted_text, len_out);
 
 }
 
+// stuff to store packet
+int packetSize = 29;
+  uint8_t ble_data1[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x03, 0xff, 0x00, 0x00, 0x15, 0x09};
+  uint8_t ble_data2[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x03, 0xff, 0x00, 0x01, 0x15, 0x09};
+  uint8_t ble_data3[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x03, 0xff, 0x00, 0x02, 0x15, 0x09};
+  uint8_t ble_data4[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x03, 0xff, 0x00, 0x03, 0x15, 0x09};
+  uint8_t ble_data5[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x03, 0xff, 0x00, 0x04, 0x15, 0x09};
+  uint8_t ble_data6[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x03, 0xff, 0x00, 0x05, 0x15, 0x09};
+
+int packetNum = 1;
+
+void switch_timer_callback(void* context){
+	switch (packetNum){
+		case 1:
+			printf("1 sent!\r\n");
+			simple_ble_adv_raw(ble_data1, packetSize);
+			packetNum++;
+			break;
+		case 2:
+			printf("2 sent!\r\n");
+			simple_ble_adv_raw(ble_data2, packetSize);
+			packetNum++;
+			break;
+		case 3:
+			printf("3 sent!\r\n");
+			simple_ble_adv_raw(ble_data3, packetSize);
+			packetNum++;
+			break;
+		case 4:
+			printf("4 sent!\r\n");
+			simple_ble_adv_raw(ble_data4, packetSize);
+			packetNum++;
+			break;
+		case 5:
+			printf("5 sent!\r\n");
+			simple_ble_adv_raw(ble_data5, packetSize);
+			packetNum++;
+			break;
+		case 6:
+			printf("6 sent!\r\n");
+			simple_ble_adv_raw(ble_data6, packetSize);
+			packetNum = 1;
+			break;
+	}
+}
 
 /*******************************************************************************
  *   State for this application
@@ -190,13 +243,13 @@ int main(void) {
 
   printf("Board started. Initializing BLE: \n");
   // Setup BLE
-  simple_ble_app = simple_ble_init(&ble_config);
-
+  
   printf("AES_CBC started.\r\n\r\n");
   printf("starting timer \n");
-  counter_init(); 
-  counter_start();
+  simple_ble_app = simple_ble_init(&ble_config);
 
+counter_init();
+counter_start();
   // get MAC
   ret_code_t ret;
 
@@ -212,25 +265,24 @@ int main(void) {
   ret = nrf_mem_init();
   APP_ERROR_CHECK(ret);
 #endif
+for(int i = 0; i < 1000; i++){
   encrypt_cbc();
-
-  
-  counter_stop();
-  uint32_t time = counter_get();
-  printf("timer was %lu milliseconds\n", time);
-
-  // Start Advertising
-  uint8_t advertisement[NRF_CRYPTO_EXAMPLE_AES_MAX_TEXT_SIZE];
-  memcpy(advertisement, encrypted_text, sizeof(encrypted_text));
-  
-  printf("printing advertisement\r\n");
-  for(int x = 0; x < NRF_CRYPTO_EXAMPLE_AES_MAX_TEXT_SIZE; x++){
-  	printf("%x ", advertisement[x]);
+}
+counter_stop();
+int time = counter_get();
+printf("timer was %d * 30.517 microseconds\n", time);
+  for(int x = 0; x < 20; x++){
+	  ble_data1[9 + x] = (uint8_t) encrypted_text[x];
+	  ble_data2[9 + x] = (uint8_t) encrypted_text[20 + x];
+	  ble_data3[9 + x] = (uint8_t) encrypted_text[40 + x];
+	  ble_data4[9 + x] = (uint8_t) encrypted_text[60 + x];
+	  ble_data5[9 + x] = (uint8_t) encrypted_text[80 + x];
+	  ble_data6[9 + x] = (uint8_t) encrypted_text[100 + x];
   }
-
-  // stuff for regular raw ble advertisements
-  simple_ble_adv_raw(advertisement,  20);
+ 
   printf("Started BLE advertisements\n");
+  app_timer_create(&switch_send_timer, APP_TIMER_MODE_REPEATED, switch_timer_callback);
+  app_timer_start(switch_send_timer, APP_TIMER_TICKS(1000), NULL);
 
   while(1) {
     power_manage();

@@ -65,7 +65,7 @@ void counter_init(void)
     nrf_drv_rtc_config_t config = NRF_DRV_RTC_DEFAULT_CONFIG;
 
     // 1 ms interval.
-    config.prescaler = 32;
+    config.prescaler = 0;
 
     err_code = nrf_drv_rtc_init(&m_rtc, &config, rtc_handler);
     APP_ERROR_CHECK(err_code);

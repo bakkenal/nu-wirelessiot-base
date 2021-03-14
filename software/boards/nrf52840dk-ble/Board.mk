@@ -80,15 +80,25 @@ BOARD_SOURCES += \
 	nrfx_twim.c\
 	nrfx_uart.c\
 	nrfx_uarte.c\
+	nrf_crypto_aead.c\
 	nrf_crypto_aes.c\
 	nrf_crypto_aes_shared.c\
+	nrf_crypto_ecc.c\
+	nrf_crypto_ecdh.c\
 	nrf_crypto_error.c\
 	nrf_crypto_init.c\
+	nrf_crypto_rng.c\
+	nrf_crypto_shared.c\
 	cc310_backend_aes.c\
+	cc310_backend_aes_aead.c\
+	cc310_backend_chacha_poly_aead.c\
+	cc310_backend_ecc.c\
+	cc310_backend_ecdh.c\
+	cc310_backend_ecdsa.c\
 	cc310_backend_mutex.c\
+	cc310_backend_rng.c\
 	cc310_backend_shared.c\
 	mem_manager.c\
-
 
 ifneq ($(SOFTDEVICE_MODEL),blank)
 BOARD_SOURCES += \

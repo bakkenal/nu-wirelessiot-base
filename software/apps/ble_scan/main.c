@@ -29,6 +29,7 @@
 #include "nrf_crypto_error.h"
 #include "mem_manager.h"
 
+#include "counter.h"
 
 // crypto stuff
 
@@ -58,7 +59,6 @@ static char m_plain_text[] =
 
 static char decrypted_text[NRF_CRYPTO_EXAMPLE_AES_MAX_TEXT_SIZE];
 static char encrypted_text[NRF_CRYPTO_EXAMPLE_AES_MAX_TEXT_SIZE];
-int packetGet = 0;
 
 static void text_print(char const* p_label, char const * p_text, size_t len)
 {
@@ -108,15 +108,18 @@ static void decrypted_text_print(char const * p_text, size_t decrypted_len)
     hex_text_print("Decrypted text (hex)", p_text, decrypted_len);
 }
 
+static void encrypted_text_print(char const * p_text, size_t encrypted_len)
+{
+    hex_text_print("Encrypted text (hex)", p_text, encrypted_len);
+}
+
 static void decrypt_cbc(void)
 {
     uint8_t     iv[16];
     ret_code_t  ret_val;
-    size_t      len_in;
     size_t      len_out;
         
     static nrf_crypto_aes_context_t cbc_decr_128_ctx; // AES CBC decryption context
-    plain_text_print();
 
     memset(decrypted_text,  0, sizeof(decrypted_text));
 
@@ -124,13 +127,14 @@ static void decrypt_cbc(void)
     // Decryption phase
     //
 
+//    printf("decryption started!\r\n");
     /* Init decryption context for 128 bit key and PKCS7 padding mode */
     ret_val = nrf_crypto_aes_init(&cbc_decr_128_ctx,
                                   &g_nrf_crypto_aes_cbc_128_pad_pkcs7_info,
                                   NRF_CRYPTO_DECRYPT);
     AES_ERROR_CHECK(ret_val);
 
-
+//    printf("init finished!\r\n");
     /* Set key for decryption context - only first 128 key bits will be used */
     ret_val = nrf_crypto_aes_key_set(&cbc_decr_128_ctx, m_key);
     AES_ERROR_CHECK(ret_val);
@@ -141,18 +145,27 @@ static void decrypt_cbc(void)
     ret_val = nrf_crypto_aes_iv_set(&cbc_decr_128_ctx, iv);
     AES_ERROR_CHECK(ret_val);
 
+    len_out = sizeof(encrypted_text);
+    size_t encryption_size = 120;
+    while(encrypted_text[encryption_size-1] == 0x00){
+    	encryption_size -= 1;
+    }
+//    printf("encryption size is %d\r\n", encryption_size);
+//    encrypted_text_print(encrypted_text, len_out);
+//    printf("starting decryption!\r\n");
+
     /* Decrypt text */
     ret_val = nrf_crypto_aes_finalize(&cbc_decr_128_ctx,
                                       (uint8_t *)encrypted_text,
-                                      len_out,
+                                      encryption_size,
                                       (uint8_t *)decrypted_text,
                                       &len_out);
     AES_ERROR_CHECK(ret_val);
-
+//    printf("decryption finished!\r\n\r\n");
     /* trim padding */
     decrypted_text[len_out] = '\0';
 
-    decrypted_text_print(decrypted_text, len_out);
+//    decrypted_text_print(decrypted_text, len_out);
     
     NRF_LOG_FLUSH();
 }
@@ -170,6 +183,7 @@ static simple_ble_config_t ble_config = {
 };
 simple_ble_app_t* simple_ble_app;
 
+int checks[6] = {0,0,0,0,0,0};
 
 // Callback handler for advertisement reception
 void ble_evt_adv_report(ble_evt_t const* p_ble_evt) {
@@ -181,38 +195,52 @@ void ble_evt_adv_report(ble_evt_t const* p_ble_evt) {
   uint16_t adv_len = adv_report->data.len; // length of advertisement payload data
   
   // get packet, process
-  if(*(ble_addr + 5) == 0xc0 && packetGet == 0){
-	for(uint16_t x = 0; x < adv_len; x++){
-		encrypted_text[x] = (char)adv_buf[x]; 
+  if(*(ble_addr + 5) == 0xc0 && *(ble_addr + 4) == 0x98){
+	
+	int packetNumber =  adv_buf[6];
+  	if(checks[packetNumber] != 1){
+		printf("found %d\r\n", packetNumber);
+		for(int x = 0; x < 20; x++){
+		 	encrypted_text[x + 20*packetNumber] = (char) adv_buf[9 + x];
+		}
+		checks[packetNumber] = 1;
+
+		if(checks[0] == 1 && checks[1] == 1 && checks[2] == 1 && checks[3] == 1 && checks[4] == 1 && checks[5] == 1){
+			printf("all packets received!\r\n");
+			printf("starting timer\r\n");
+			counter_init();
+			counter_start();
+			ret_code_t ret;
+
+        		APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
+        		NRF_LOG_DEFAULT_BACKENDS_INIT();
+		
+        		NRF_LOG_FLUSH();
+	
+	        	nrf_drv_clock_lfclk_request(NULL);
+	
+	        	ret = nrf_crypto_init();
+	        	APP_ERROR_CHECK(ret);
+	
+	       		#if NRF_CRYPTO_BACKEND_MBEDTLS_ENABLED
+	       		    ret = nrf_mem_init();
+	       	     	    APP_ERROR_CHECK(ret);
+	       	 	#endif
+			for(int i = 0; i < 1000; i++){
+		        decrypt_cbc();
+			}
+			counter_stop();
+			int time = counter_get();
+			printf("timer was %d * 30.517 microseconds\r\n", time);
+		}
 	}
-	packetGet = 1;
-
-	ret_code_t ret;
-
-    	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-    	NRF_LOG_DEFAULT_BACKENDS_INIT();
-
-    	NRF_LOG_RAW_INFO("AES CBC example with padding started.\r\n\r\n");
-    	NRF_LOG_FLUSH();
-	
-	nrf_drv_clock_lfclk_request(NULL);
-
-        ret = nrf_crypto_init();
-        APP_ERROR_CHECK(ret);
-	
-    #if NRF_CRYPTO_BACKEND_MBEDTLS_ENABLED
-        ret = nrf_mem_init();
-        APP_ERROR_CHECK(ret);
-    #endif
-	decrypt_cbc();
-
   }
 }
-
 int main(void) {
 
   // Setup BLE
   // Note: simple BLE is our own library. You can find it in `nrf5x-base/lib/simple_ble/`
+  printf("starting scanning\r\n");
   simple_ble_app = simple_ble_init(&ble_config);
   advertising_stop();
 
