@@ -6,6 +6,7 @@
 #include "sdk_common.h"
 #include "boards.h"
 #include "nrf_assert.h"
+#include "simple_ble.h"
 
 #include "nrf_crypto.h"
 #include "nrf_crypto_ecc.h"
@@ -22,9 +23,9 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-//#include "nrf.h"
-//#include "nrf_drv_clock.h"
-//#include "nrf_delay.h"
+#include "nrf.h"
+#include "nrf_drv_clock.h"
+#include "nrf_delay.h"
 
 static void print_array(uint8_t const * p_string, size_t size)
 {
@@ -215,7 +216,6 @@ static void alice_step_2()
 /** @brief Bob must keep his private key between step 1 and step 2.
  */
 static nrf_crypto_ecc_private_key_t m_bob_private_key;
-// generate context for creating new key pair
 
 /** @brief First step of Bob's work. Ended with send public key to Alice.
  */
@@ -230,7 +230,7 @@ void bob_step_1()
 
     // Bob creates new key pair each time
     err_code = nrf_crypto_ecc_key_pair_generate(NULL,
-                                                &g_nrf_crypto_ecc_secp256r1_curve_info,
+                                                &g_nrf_crypto_ecc_secp256k1_curve_info,
                                                 &m_bob_private_key,
                                                 &bob_public_key);
     DEMO_ERROR_CHECK(err_code);
@@ -309,9 +309,6 @@ static void log_init(void)
 // insert crypto-related stuff here
 
 int main(void){
-	counter_init();
-	counter_start();
-
 	// crypto stuff
 	ret_code_t err_code = NRF_SUCCESS;
 
@@ -344,9 +341,4 @@ int main(void){
 	for (;;)
 	{
 	}
-
-	// end, get time
-	counter_stop();
-	int time = counter_get();
-	printf("timer was %d * 30.517 microseconds\n", time);
 }

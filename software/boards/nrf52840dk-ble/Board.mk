@@ -24,7 +24,7 @@ BOARD_VARS = \
 	USE_APP_CONFIG\
 	DEBUG\
 	DEBUG_NRF\
-
+	
 # Default SDK source files to be included
 BOARD_SOURCES += \
 	SEGGER_RTT.c\
