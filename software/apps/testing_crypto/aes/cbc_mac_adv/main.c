@@ -147,7 +147,7 @@ static void crypt_cbc_mac(void)
 
     memset(mac, 0, sizeof(mac));
 
-    plain_text_print();
+ //   plain_text_print();
 
     /* Init cbc_mac context */
     ret_val = nrf_crypto_aes_init(&cbc_mac_128_ctx,
@@ -179,7 +179,7 @@ static void crypt_cbc_mac(void)
     ret_val = nrf_crypto_aes_uninit(&cbc_mac_128_ctx);
     AES_ERROR_CHECK(ret_val);
 
-    mac_print(mac, len_out);
+//    mac_print(mac, len_out);
 }
 
 
@@ -212,23 +212,13 @@ int main(void) {
   ret = nrf_crypto_init();
   APP_ERROR_CHECK(ret);
 
-  crypt_cbc_mac();
+  for(int x = 0; x < 100000; x++){
+  	crypt_cbc_mac();
+  }
 
   counter_stop();
   uint32_t time = counter_get();
   printf("timer was %lu milliseconds\n", time);
-
-  // Start Advertising
-  // two bytes, specify flags type, specify flags, three bytes, manufacturer type, 0x0965(asahi kasei), name, 13 bytes, name's bytes
-  uint8_t ble_data[BLE_GAP_ADV_SET_DATA_SIZE_MAX] = {0x02, 0x01, 0x06, 0x03, 0xff, 0x65, 0x09, 0x0E, 0x09, 0x6d, 0x61, 0x73, 0x68, 0x65, 0x64, 0x20, 0x70, 0x6f, 0x74, 0x61, 0x74, 0x6f};
-
-  // stuff for regular raw ble advertisements
-  simple_ble_adv_raw(ble_data, 22);
-  printf("Started BLE advertisements\n");
-
-  while(1) {
-    power_manage();
-  }
 }
 
 /** @} */
